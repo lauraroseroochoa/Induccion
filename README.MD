@@ -45,7 +45,7 @@ Antes de ejecutar el proyecto, asegúrese de contar con:
 - Visual Studio Code (opcional, recomendado)
 - Sistema Operativo Windows
 
-> ⚠️ Verifique que Docker se encuentre en ejecución antes de iniciar el proceso.
+> Verifique que Docker se encuentre en ejecución antes de iniciar el proceso.
 > El script principal puede intentar iniciarlo automáticamente, pero se recomienda validarlo manualmente.
 
 ---
