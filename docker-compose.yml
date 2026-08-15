@@ -1,0 +1,61 @@
+version: "3.9"
+
+networks:
+  db_network:
+    driver: bridge
+
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: entidadesTerritorialesColombia
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppass
+    ports:
+      - "3309:3306"
+    volumes:
+      - ./data:/var/lib/mysql
+    command: --local-infile=1
+    networks:
+      db_network:
+        aliases:
+          - mariadb
+
+  loader:
+    image: ubuntu:22.04
+    container_name: data_loader
+    depends_on:
+      - mariadb
+    ports:
+      - "3310:3306"
+    volumes:
+      - ./init:/home/loader/init
+      - ./repository:/home/loader/repository
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: root123
+      DB_NAME: entidadesTerritorialesColombia
+    entrypoint: >
+      bash -c "
+        echo '[loader] Instalando cliente MariaDB...';
+        apt-get update -qq && apt-get install -y -qq mariadb-client > /dev/null 2>&1;
+
+        echo '[loader] Esperando a que MariaDB esté disponible en $$DB_HOST:$$DB_PORT...';
+        until mariadb -h $$DB_HOST -P $$DB_PORT -u $$DB_USER -p$$DB_PASSWORD -e 'SELECT 1;' > /dev/null 2>&1; do
+          echo '[loader] MariaDB no disponible aún, reintentando en 5 segundos...';
+          sleep 5;
+        done;
+
+        echo '[loader] Conexión establecida con $$DB_HOST:$$DB_PORT';
+        echo '[loader] Ejecutando script SQL...';
+        mariadb -h $$DB_HOST -P $$DB_PORT -u $$DB_USER -p$$DB_PASSWORD --local-infile=1 $$DB_NAME < /home/loader/init/01_schema.sql;
+
+        echo '[loader] Carga de datos completada exitosamente.';
+      "
+    networks:
+      - db_network
